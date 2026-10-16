@@ -1,14 +1,22 @@
 import pyxel
 
-TILE_FLOOR1 = (4,1)
-TILE_FLOOR2 = (4,2)
-TILE_FLOOR3 = (5,0)
-TILE_FLOOR4 = (5,1)
+TILE_FLOOR1 = (4, 1)
+TILE_FLOOR2 = (4, 2)
+TILE_FLOOR3 = (5, 0)
+TILE_FLOOR4 = (5, 1)
 
-TILE_SOLID = [TILE_FLOOR1, TILE_FLOOR2, TILE_FLOOR3, TILE_FLOOR4, (7,0), (8,0)]
+TILE_SOLID = [
+    TILE_FLOOR1, TILE_FLOOR2, TILE_FLOOR3, TILE_FLOOR4,
+    (7, 0), (8, 0)
+]
+
+TILE_PLATFORM = (1, 0)
 
 scroll_x = 0
 SCROLL_BORDER = 64
+
+# GAME OVER : l'oiseau est considéré comme tombé
+GAME_OVER_Y = 136
 
 class Player:
     def __init__(self, x, y):
@@ -77,13 +85,17 @@ class Physics:
 
         return pyxel.tilemaps[0].pget(tile_x, tile_y)
 
-    def is_on_floor(self,x,y):
+    def is_on_floor(self, x, y):
         tile_left = self.get_tile(x, y + 8)
         tile_right = self.get_tile(x + 7, y + 8)
+
         if tile_left in TILE_SOLID or tile_right in TILE_SOLID:
             return True
-        else:
-            return False
+
+        if tile_left == TILE_PLATFORM or tile_right == TILE_PLATFORM:
+            return True
+
+        return False
 
     # NOUVEAU : teste les 4 coins du sprite (8x8) pour les murs
     def is_wall(self, x, y):
@@ -98,8 +110,8 @@ class Physics:
                 return True
         return False
 
-    def get_floor_y(self,x,y):
-        tile_y = (y+8) // 8
+    def get_floor_y(self, x, y):
+        tile_y = (y + 8) // 8
         floor_y = tile_y * 8
         return floor_y - 8
 
