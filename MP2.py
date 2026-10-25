@@ -22,12 +22,12 @@ class Player:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.vx = 2
+        self.vx = 4 #ct 2
         self.vy = 0
         self.is_facing_right = True
         self.physics = Physics()
         self.is_on_the_ground = False
-        self.jump_force = 6
+        self.jump_force = 4 #ct 6
 
     def update(self):
         moving = False
