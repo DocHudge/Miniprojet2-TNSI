@@ -13,9 +13,20 @@ TILE_SOLID = [
 
 TILE_PLATFORM = (1, 0)
 
+ORB_TYPES = [
+    (0, 1),
+    (1, 1),
+    (2, 1),
+    (2, 4),
+    (3, 4)
+]
+
+XP_MAX = 5
+SUPER_JUMP_FORCE = 11
+GAME_OVER_Y = 136
+
 scroll_x = 0
 SCROLL_BORDER = 64
-GAME_OVER_Y = 136
 
 
 class Player:
@@ -28,19 +39,21 @@ class Player:
         self.physics = Physics()
         self.is_on_the_ground = False
         self.jump_force = 6
+        self.moving = False
+        self.xp = 0
 
     def update(self):
-        moving = False
+        self.moving = False
 
         if pyxel.btn(pyxel.KEY_LEFT):
             self.is_facing_right = False
-            moving = True
+            self.moving = True
             if not self.physics.is_wall(self.x - self.vx, self.y):
                 self.x -= self.vx
 
         if pyxel.btn(pyxel.KEY_RIGHT):
             self.is_facing_right = True
-            moving = True
+            self.moving = True
             if not self.physics.is_wall(self.x + self.vx, self.y):
                 self.x += self.vx
 
@@ -48,8 +61,13 @@ class Player:
             self.is_on_the_ground = False
             self.vy = -self.jump_force
 
-        self.vy = min(self.vy + self.physics.gravity, 6)
+        if pyxel.btnp(pyxel.KEY_X) and self.is_on_the_ground and self.xp >= XP_MAX:
+            self.is_on_the_ground = False
+            self.vy = -SUPER_JUMP_FORCE
+            self.xp = 0
+
         old_y = self.y
+        self.vy = min(self.vy + self.physics.gravity, 6)
         self.y += self.vy
 
         if self.vy < 0 and self.physics.is_wall(self.x, self.y):
@@ -62,8 +80,6 @@ class Player:
             self.y = self.physics.get_floor_y(self.x, self.y)
         else:
             self.is_on_the_ground = False
-
-        self.moving = moving
 
     def draw(self):
         screen_x = self.x - scroll_x
@@ -100,14 +116,10 @@ class Physics:
         if tile_left in TILE_SOLID or tile_right in TILE_SOLID:
             return True
 
-        if self.get_tile(x, y + 8) == TILE_PLATFORM:
-            platform_y = ((y + 8) // 8) * 8
-            if old_y + 8 <= platform_y <= y + 8:
-                return True
+        platform_y = ((y + 8) // 8) * 8
 
-        if self.get_tile(x + 7, y + 8) == TILE_PLATFORM:
-            platform_y = ((y + 8) // 8) * 8
-            if old_y + 8 <= platform_y <= y + 8:
+        if old_y + 8 <= platform_y <= y + 8:
+            if tile_left == TILE_PLATFORM or tile_right == TILE_PLATFORM:
                 return True
 
         return False
@@ -117,7 +129,7 @@ class Physics:
             self.get_tile(x, y),
             self.get_tile(x + 7, y),
             self.get_tile(x, y + 7),
-            self.get_tile(x + 7, y + 7),
+            self.get_tile(x + 7, y + 7)
         ]
 
         return any(tile in TILE_SOLID for tile in corners)
@@ -135,14 +147,34 @@ class App:
 
         self.map_width = 1000
         self.physics = Physics()
-        self.game_over = False
         self.player = Player(50, 50)
+        self.game_over = False
+        self.collected_tiles = []
 
         pyxel.run(self.update, self.draw)
+
+    def collect_orbs(self):
+        left = int(self.player.x) // 8
+        right = int(self.player.x + 7) // 8
+        top = int(self.player.y) // 8
+        bottom = int(self.player.y + 7) // 8
+
+        for tile_y in range(top, bottom + 1):
+            for tile_x in range(left, right + 1):
+                tile = pyxel.tilemaps[0].pget(tile_x, tile_y)
+
+                if tile in ORB_TYPES:
+                    self.collected_tiles.append((tile_x, tile_y, tile))
+                    pyxel.tilemaps[0].pset(tile_x, tile_y, (0, 0))
+                    self.player.xp = min(self.player.xp + 1, XP_MAX)
 
     def restart(self):
         global scroll_x
 
+        for tile_x, tile_y, tile in self.collected_tiles:
+            pyxel.tilemaps[0].pset(tile_x, tile_y, tile)
+
+        self.collected_tiles.clear()
         self.player = Player(50, 50)
         self.game_over = False
         scroll_x = 0
@@ -151,18 +183,19 @@ class App:
         global scroll_x
 
         if self.game_over:
-            button_clicked = (
+            clicked = (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
                 and 24 <= pyxel.mouse_x <= 104
                 and 70 <= pyxel.mouse_y <= 92
             )
 
-            if button_clicked or pyxel.btnp(pyxel.KEY_R):
+            if clicked or pyxel.btnp(pyxel.KEY_R):
                 self.restart()
 
             return
 
         self.player.update()
+        self.collect_orbs()
 
         if self.player.y > GAME_OVER_Y:
             self.game_over = True
@@ -171,15 +204,54 @@ class App:
         scroll_x = self.player.x - SCROLL_BORDER
         scroll_x = max(0, min(scroll_x, self.map_width - 128))
 
+    def draw_xp_bar(self):
+        x, y = 5, 5
+        width, height = 62, 8
+
+        pyxel.rect(x, y, width, height, 1)
+        pyxel.rectb(x, y, width, height, 7)
+
+        fill_width = int((self.player.xp / XP_MAX) * (width - 2))
+
+        if fill_width > 0:
+            pyxel.rect(x + 1, y + 1, fill_width, height - 2, 12)
+
+        pyxel.text(x, y + 11, "XP", 7)
+
+        if self.player.xp >= XP_MAX:
+            pyxel.text(27, y + 11, "X: SUPER SAUT", 10)
+        else:
+            pyxel.text(27, y + 11, f"{self.player.xp}/{XP_MAX}", 7)
+
     def draw(self):
         pyxel.cls(0)
 
+        
         if not self.game_over:
             pyxel.bltm(0, 0, 0, scroll_x, 0, 128, 128)
             self.player.draw()
+            self.draw_xp_bar()
+
+            pyxel.text(
+                10, 30,
+                f"Player : {self.player.x}, {self.player.y}",
+                9
+            )
+
+            tile_x, tile_y = self.physics.get_tile(
+                self.player.x, self.player.y
+            )
+            pyxel.text(10, 40, f"Tile : {tile_x}, {tile_y}", 9)
+
+            pyxel.text(
+                10, 50,
+                f"On floor : {self.player.is_on_the_ground}",
+                9
+            )
             return
 
-        pyxel.rect(0, 0, 128, 128, 1)
+
+        pyxel.cls(1)
         pyxel.rectb(8, 8, 112, 112, 13)
 
         pyxel.text(39, 35, "GAME OVER", 8)
