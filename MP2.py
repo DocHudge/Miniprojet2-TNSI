@@ -5,10 +5,13 @@ TILE_FLOOR1 = (4, 1)
 TILE_FLOOR2 = (4, 2)
 TILE_FLOOR3 = (5, 0)
 TILE_FLOOR4 = (5, 1)
+TILE_FLOOR5 = (5, 2)
+TILE_FLOOR6 = (6, 2)
+TILE_FLOOR7 = (7, 2)
 
 TILE_SOLID = [
-    TILE_FLOOR1, TILE_FLOOR2, TILE_FLOOR3, TILE_FLOOR4,
-    (7, 0), (8, 0)
+    TILE_FLOOR1, TILE_FLOOR2, TILE_FLOOR3, TILE_FLOOR4, TILE_FLOOR5, TILE_FLOOR6, TILE_FLOOR7, 
+    (7, 0), (8, 0), (5, 4), (5, 5), (6, 5), (6, 7), (7, 4), (7, 5), (6, 1), (7, 1)
 ]
 
 TILE_PLATFORM = (1, 0)
@@ -145,7 +148,7 @@ class App:
         pyxel.load("1.pyxres")
         pyxel.mouse(True)
 
-        self.map_width = 1000
+        self.map_width = 10000
         self.physics = Physics()
         self.player = Player(50, 50)
         self.game_over = False
@@ -231,25 +234,25 @@ class App:
             pyxel.bltm(0, 0, 0, scroll_x, 0, 128, 128)
             self.player.draw()
             self.draw_xp_bar()
+        
+#            pyxel.text(
+#                10, 30,
+#                f"Player : {self.player.x}, {self.player.y}",
+#                9
+#            )
 
-            pyxel.text(
-                10, 30,
-                f"Player : {self.player.x}, {self.player.y}",
-                9
-            )
+#            tile_x, tile_y = self.physics.get_tile(
+#                self.player.x, self.player.y
+#            )
+#            pyxel.text(10, 40, f"Tile : {tile_x}, {tile_y}", 9)
 
-            tile_x, tile_y = self.physics.get_tile(
-                self.player.x, self.player.y
-            )
-            pyxel.text(10, 40, f"Tile : {tile_x}, {tile_y}", 9)
-
-            pyxel.text(
-                10, 50,
-                f"On floor : {self.player.is_on_the_ground}",
-                9
-            )
+#            pyxel.text(
+#                10, 50,
+#                f"On floor : {self.player.is_on_the_ground}",
+#                9
+#            )
             return
-
+        
 
         pyxel.cls(1)
         pyxel.rectb(8, 8, 112, 112, 13)
